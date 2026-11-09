@@ -1,0 +1,521 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MY MOVIE TIER LIST</title>
+<style>
+* { box-sizing:border-box; }
+body {
+  margin:0; background:#101116; color:#f5f5f7;
+  font-family:Arial,"Malgun Gothic",sans-serif;
+}
+header {
+  padding:30px 5%; background:#171820;
+  border-bottom:1px solid #30313c;
+}
+.header-inner {
+  max-width:1400px; margin:auto;
+  display:flex; justify-content:space-between;
+  align-items:center; gap:15px; flex-wrap:wrap;
+}
+h1 { margin:0; font-size:28px; letter-spacing:2px; }
+.subtitle { color:#9294a2; font-size:13px; margin-top:8px; }
+button {
+  border:0; cursor:pointer; border-radius:7px;
+  padding:10px 15px; font-weight:bold;
+  transition:.2s;
+}
+button:hover { opacity:.8; transform:translateY(-1px); }
+.primary { background:#8066ef; color:white; }
+.secondary { background:#30313c; color:white; }
+.danger { background:#a83d4a; color:white; }
+main { max-width:1400px; margin:auto; padding:30px 5%; }
+.toolbar {
+  display:flex; gap:10px; flex-wrap:wrap;
+  margin-bottom:25px;
+}
+.toolbar button { font-size:13px; }
+.stats { color:#9b9dab; font-size:13px; margin-left:auto; align-self:center; }
+.tier {
+  display:flex; margin-bottom:12px;
+  min-height:150px; background:#1b1c25;
+  border:1px solid #30313c; border-radius:10px;
+  overflow:hidden;
+}
+.tier-label {
+  width:90px; min-width:90px;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  font-size:30px; font-weight:900;
+  color:#171820;
+}
+.tier-label small { font-size:10px; margin-top:5px; }
+.tier-content {
+  flex:1; padding:13px;
+  display:flex; flex-wrap:wrap; align-content:flex-start;
+  gap:12px; min-width:0;
+}
+.tier-content.over { background:#35304d; }
+.movie {
+  width:105px; cursor:grab; position:relative;
+  text-align:center; font-size:12px;
+}
+.movie:active { cursor:grabbing; }
+.movie img {
+  width:105px; height:145px; object-fit:cover;
+  border-radius:6px; background:#30313c;
+  border:1px solid #444653;
+}
+.movie-name {
+  margin-top:6px; overflow-wrap:anywhere;
+  line-height:1.4; color:#e7e7ed;
+}
+.remove-movie {
+  position:absolute; top:4px; right:4px;
+  background:#b92d3d; color:white;
+  padding:4px 7px; font-size:11px;
+  border-radius:5px;
+}
+.empty {
+  color:#777986; font-size:12px;
+  margin:auto; padding:10px;
+}
+.modal-bg {
+  display:none; position:fixed; inset:0;
+  background:#000b; z-index:10;
+  align-items:center; justify-content:center;
+  padding:15px;
+}
+.modal {
+  width:100%; max-width:420px;
+  padding:25px; border-radius:12px;
+  background:#20212b; border:1px solid #414250;
+}
+.modal h2 { margin-top:0; }
+.modal input {
+  width:100%; padding:12px; margin:8px 0 15px;
+  background:#12131a; border:1px solid #454653;
+  border-radius:7px; color:white;
+}
+.modal label { font-size:13px; color:#c4c4ce; }
+.modal-actions { display:flex; gap:10px; margin-top:15px; }
+.modal-actions button { flex:1; }
+footer {
+  text-align:center; color:#686a77;
+  font-size:12px; padding:30px;
+}
+@media(max-width:600px) {
+  h1 { font-size:22px; }
+  main { padding:20px 12px; }
+  .tier-label { width:55px; min-width:55px; font-size:24px; }
+  .tier-content { gap:8px; padding:9px; }
+  .movie { width:75px; }
+  .movie img { width:75px; height:110px; }
+  .stats { width:100%; margin:0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>🎬 MY MOVIE TIER LIST</h1>
+      <div class="subtitle">YOUR MOVIES. YOUR RANKING. YOUR STORY.</div>
+    </div>
+    <button class="primary" onclick="openMovieModal()">＋ 영화 추가</button>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <button class="secondary" onclick="addTier()">＋ 티어 추가</button>
+    <button class="secondary" onclick="exportData()">↓ 백업 / 공유</button>
+    <button class="secondary" onclick="document.getElementById('importFile').click()">↑ 데이터 가져오기</button>
+    <button class="secondary" onclick="window.print()">인쇄</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden onchange="importData(event)">
+    <div class="stats" id="stats">총 0편의 영화</div>
+  </div>
+
+  <div id="tierContainer"></div>
+</main>
+
+<footer>
+  MY MOVIE TIER LIST · DATA SAVED LOCALLY
+</footer>
+
+<!-- 영화 추가 모달 -->
+<div class="modal-bg" id="movieModal">
+  <div class="modal">
+    <h2>🎞️ 영화 추가하기</h2>
+
+    <label>영화 제목</label>
+    <input id="movieTitle" placeholder="영화 제목을 입력하세요">
+
+    <label>포스터 이미지 URL</label>
+    <input id="movieUrl" placeholder="https://example.com/poster.jpg">
+
+    <label>또는 포스터 파일 선택</label>
+    <input id="movieFile" type="file" accept="image/*">
+
+    <label>추가할 티어</label>
+    <select id="movieTier" style="width:100%;padding:12px;background:#12131a;color:white;border:1px solid #454653;border-radius:7px"></select>
+
+    <div class="modal-actions">
+      <button class="primary" onclick="addMovie()">영화 등록</button>
+      <button class="secondary" onclick="closeMovieModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "my_movie_tier_list_v1";
+
+const defaultTiers = [
+  {id:"s", name:"S", color:"#f5d66d", movies:[]},
+  {id:"a", name:"A", color:"#ef8a8a", movies:[]},
+  {id:"b", name:"B", color:"#8dabea", movies:[]},
+  {id:"c", name:"C", color:"#a9d28d", movies:[]},
+  {id:"d", name:"D", color:"#b99be5", movies:[]},
+  {id:"e", name:"E", color:"#9296a3", movies:[]}
+];
+
+let tiers = loadData();
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return structuredClone(defaultTiers);
+    const data = JSON.parse(saved);
+    if (!Array.isArray(data) || !data.every(t =>
+      t && typeof t.id === "string" &&
+      typeof t.name === "string" &&
+      Array.isArray(t.movies)
+    )) throw new Error("Invalid data");
+    return data;
+  } catch(e) {
+    return structuredClone(defaultTiers);
+  }
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tiers));
+    render();
+  } catch(e) {
+    alert("저장 공간이 부족합니다. 이미지 용량을 줄여주세요.");
+  }
+}
+
+function render() {
+  const container = document.getElementById("tierContainer");
+  container.innerHTML = "";
+
+  let total = 0;
+
+  tiers.forEach(tier => {
+    total += tier.movies.length;
+
+    const section = document.createElement("section");
+    section.className = "tier";
+
+    const label = document.createElement("div");
+    label.className = "tier-label";
+    label.style.background = tier.color;
+    label.innerHTML = `<span></span><small></small>`;
+    label.children[0].textContent = tier.name;
+    label.children[1].textContent = tier.movies.length + " MOVIES";
+
+    const content = document.createElement("div");
+    content.className = "tier-content";
+    content.dataset.tier = tier.id;
+
+    content.addEventListener("dragover", e => {
+      e.preventDefault();
+      content.classList.add("over");
+    });
+
+    content.addEventListener("dragleave", () => {
+      content.classList.remove("over");
+    });
+
+    content.addEventListener("drop", e => {
+      e.preventDefault();
+      content.classList.remove("over");
+      const movieId = e.dataTransfer.getData("text/plain");
+      moveMovie(movieId, tier.id);
+    });
+
+    if (!tier.movies.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "영화를 이곳에 드래그하세요";
+      content.appendChild(empty);
+    }
+
+    tier.movies.forEach(movie => {
+      const card = document.createElement("div");
+      card.className = "movie";
+      card.draggable = true;
+
+      card.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/plain", movie.id);
+      });
+
+      const img = document.createElement("img");
+      img.src = movie.poster;
+      img.alt = movie.title;
+      img.onerror = () => {
+        img.removeAttribute("src");
+        img.style.background = "#343542";
+        img.alt = "이미지 없음";
+      };
+
+      const name = document.createElement("div");
+      name.className = "movie-name";
+      name.textContent = movie.title;
+
+      const remove = document.createElement("button");
+      remove.className = "remove-movie";
+      remove.textContent = "✕";
+      remove.draggable = false;
+      remove.onclick = () => deleteMovie(movie.id);
+
+      card.append(img, name, remove);
+      content.appendChild(card);
+    });
+
+    const wrapper = document.createElement("div");
+    wrapper.style.flex = "1";
+    wrapper.style.display = "flex";
+    wrapper.style.minWidth = "0";
+
+    wrapper.appendChild(content);
+
+    const tierArea = document.createElement("div");
+    tierArea.style.display = "flex";
+    tierArea.style.width = "100%";
+    tierArea.append(label, wrapper);
+
+    section.appendChild(tierArea);
+    container.appendChild(section);
+  });
+
+  document.getElementById("stats").textContent =
+    `총 ${total}편의 영화 · ${tiers.length}개 티어`;
+
+  updateTierSelect();
+}
+
+function openMovieModal() {
+  document.getElementById("movieModal").style.display = "flex";
+  updateTierSelect();
+}
+
+function closeMovieModal() {
+  document.getElementById("movieModal").style.display = "none";
+}
+
+function updateTierSelect() {
+  const select = document.getElementById("movieTier");
+  const previous = select.value;
+
+  select.innerHTML = "";
+  tiers.forEach(t => {
+    const option = document.createElement("option");
+    option.value = t.id;
+    option.textContent = t.name + " 티어";
+    select.appendChild(option);
+  });
+
+  if (tiers.some(t => t.id === previous)) select.value = previous;
+}
+
+async function addMovie() {
+  const title = document.getElementById("movieTitle").value.trim();
+  const url = document.getElementById("movieUrl").value.trim();
+  const file = document.getElementById("movieFile").files[0];
+  const tierId = document.getElementById("movieTier").value;
+
+  if (!title) return alert("영화 제목을 입력해주세요.");
+  if (!url && !file) return alert("포스터 이미지 또는 URL을 입력해주세요.");
+  if (!tiers.some(t => t.id === tierId)) return;
+
+  let poster = url;
+
+  if (file) {
+    if (!file.type.startsWith("image/")) {
+      return alert("이미지 파일만 업로드할 수 있습니다.");
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      return alert("이미지는 2MB 이하로 선택해주세요.");
+    }
+    poster = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    }).catch(() => null);
+
+    if (!poster) return alert("이미지를 읽지 못했습니다.");
+  } else {
+    try {
+      const parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
+    } catch(e) {
+      return alert("올바른 이미지 URL을 입력해주세요.");
+    }
+  }
+
+  tiers.find(t => t.id === tierId).movies.push({
+    id: crypto.randomUUID(),
+    title,
+    poster
+  });
+
+  saveData();
+  closeMovieModal();
+
+  document.getElementById("movieTitle").value = "";
+  document.getElementById("movieUrl").value = "";
+  document.getElementById("movieFile").value = "";
+}
+
+function moveMovie(movieId, targetId) {
+  let movie = null;
+
+  for (const tier of tiers) {
+    const index = tier.movies.findIndex(m => m.id === movieId);
+    if (index !== -1) {
+      movie = tier.movies.splice(index, 1)[0];
+      break;
+    }
+  }
+
+  if (!movie) return;
+
+  const target = tiers.find(t => t.id === targetId);
+  if (target) target.movies.push(movie);
+
+  saveData();
+}
+
+function deleteMovie(id) {
+  if (!confirm("이 영화를 삭제할까요?")) return;
+
+  tiers.forEach(t => {
+    t.movies = t.movies.filter(m => m.id !== id);
+  });
+
+  saveData();
+}
+
+function addTier() {
+  const name = prompt("새로운 티어 이름을 입력하세요.");
+  if (!name || !name.trim()) return;
+
+  const cleanName = name.trim();
+  if (cleanName.length > 12) return alert("티어 이름은 12자 이하로 입력해주세요.");
+  if (tiers.some(t => t.name.toLowerCase() === cleanName.toLowerCase())) {
+    return alert("이미 존재하는 티어입니다.");
+  }
+
+  const colors = ["#f0bd79","#8bcac4","#d68eae","#a2b6e9"];
+  tiers.push({
+    id: crypto.randomUUID(),
+    name: cleanName,
+    color: colors[tiers.length % colors.length],
+    movies: []
+  });
+
+  saveData();
+}
+
+function deleteTier() {
+  const name = prompt("삭제할 티어의 이름을 입력하세요.\n영화가 포함된 티어는 삭제할 수 없습니다.");
+  if (!name) return;
+
+  const index = tiers.findIndex(t =>
+    t.name.toLowerCase() === name.trim().toLowerCase()
+  );
+
+  if (index === -1) return alert("해당 티어를 찾을 수 없습니다.");
+  if (tiers[index].movies.length > 0) {
+    return alert("영화가 포함된 티어입니다. 먼저 영화를 다른 티어로 이동해주세요.");
+  }
+  if (tiers.length <= 1) return alert("최소 한 개의 티어가 필요합니다.");
+
+  tiers.splice(index, 1);
+  saveData();
+}
+
+// 백업 및 공유
+function exportData() {
+  const blob = new Blob(
+    [JSON.stringify(tiers, null, 2)],
+    {type:"application/json"}
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "my-movie-tier-list.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+
+      if (!Array.isArray(data) || !data.length ||
+          !data.every(t =>
+            t && typeof t.id === "string" &&
+            typeof t.name === "string" &&
+            Array.isArray(t.movies) &&
+            t.movies.every(m =>
+              m && typeof m.id === "string" &&
+              typeof m.title === "string" &&
+              typeof m.poster === "string"
+            )
+          )) {
+        throw new Error("Invalid data");
+      }
+
+      if (!confirm("현재 티어리스트를 가져온 데이터로 교체할까요?")) return;
+
+      tiers = data;
+      saveData();
+      alert("데이터를 성공적으로 가져왔습니다.");
+    } catch(e) {
+      alert("올바른 티어리스트 JSON 파일이 아닙니다.");
+    }
+
+    event.target.value = "";
+  };
+
+  reader.readAsText(file);
+}
+
+// 티어 삭제 버튼은 별도 도구 메뉴로 제공
+const deleteTierButton = document.createElement("button");
+deleteTierButton.className = "secondary";
+deleteTierButton.textContent = "－ 티어 삭제";
+deleteTierButton.onclick = deleteTier;
+document.querySelector(".toolbar").insertBefore(
+  deleteTierButton,
+  document.getElementById("stats")
+);
+
+render();
+</script>
+</body>
+</html>
