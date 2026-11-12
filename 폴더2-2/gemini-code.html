@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>앜~!!엌~!! 복불복게임</title>
+  <style>
+    :root {
+      --bg: #1e293b;
+      --stage-bg: #0f172a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #facc15;
+      --green: #10b981;
+      --green-dark: #059669;
+      --red: #ef4444;
+      --croc-skin: #15803d;
+      --croc-skin-dark: #0f5132;
+      --croc-skin-light: #22c55e;
+      --croc-mouth: #991b1b;
+      --croc-throat: #450a0a;
+      --tooth-bg: #ffffff;
+      --tooth-shadow: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    main {
+      width: min(100% - 32px, 680px);
+      margin: 20px auto;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: clamp(26px, 5vw, 38px);
+      margin: 0 0 8px 0;
+      color: var(--accent);
+      text-shadow: 2px 3px 6px rgba(0, 0, 0, 0.6);
+      letter-spacing: -0.02em;
+    }
+
+    .status-msg {
+      color: var(--muted);
+      margin: 0 0 20px 0;
+      font-size: 15px;
+      min-height: 22px;
+    }
+
+    /* 게임 스테이지 */
+    .game-stage {
+      position: relative;
+      width: 100%;
+      height: 450px;
+      background: var(--stage-bg);
+      border-radius: 28px;
+      border: 3px solid #334155;
+      box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      perspective: 1000px;
+    }
+
+    /* 악어 전체 컨테이너 */
+    .crocodile-head {
+      position: relative;
+      width: 340px;
+      height: 390px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 윗턱 (Upper Jaw) */
+    .upper-jaw {
+      position: absolute;
+      top: 25px;
+      width: 310px;
+      height: 175px;
+      background: linear-gradient(180deg, var(--croc-skin-light) 0%, var(--croc-skin) 100%);
+      border-radius: 155px 155px 24px 24px;
+      border: 4px solid var(--croc-skin-dark);
+      z-index: 5;
+      transform-origin: top center;
+      transform: rotateX(0deg);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: inset 0 -14px 0 rgba(0, 0, 0, 0.25), 0 10px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* 콧구멍 장식 */
+    .nostrils {
+      position: absolute;
+      top: 22px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 36px;
+      z-index: 7;
+    }
+    .nostril {
+      width: 14px;
+      height: 9px;
+      background: var(--croc-skin-dark);
+      border-radius: 50%;
+      box-shadow: inset 0 2px 3px rgba(0,0,0,0.6);
+    }
+
+    /* 악어 눈 */
+    .eyes {
+      position: absolute;
+      top: -26px;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 0 42px;
+      z-index: 6;
+    }
+    .eye {
+      width: 48px;
+      height: 48px;
+      background: #fef08a;
+      border-radius: 50%;
+      border: 4px solid var(--croc-skin-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .pupil {
+      width: 14px;
+      height: 28px;
+      background: #090d16;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    /* 윗턱 안쪽 입천장 */
+    .upper-mouth-inside {
+      position: absolute;
+      bottom: 0;
+      left: 10px;
+      right: 10px;
+      height: 125px;
+      background: var(--croc-mouth);
+      border-radius: 135px 135px 12px 12px;
+      border-top: 3px solid #7f1d1d;
+    }
+
+    /* 윗턱 장식 이빨 */
+    .upper-teeth {
+      position: absolute;
+      bottom: -16px;
+      left: 22px;
+      right: 22px;
+      display: flex;
+      justify-content: space-between;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .upper-tooth {
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 20px solid var(--tooth-bg);
+      filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.4));
+    }
+
+    /* 아랫턱 (Lower Jaw) */
+    .lower-jaw {
+      position: absolute;
+      bottom: 18px;
+      width: 324px;
+      height: 210px;
+      background: linear-gradient(0deg, var(--croc-skin-dark) 0%, var(--croc-skin) 100%);
+      border-radius: 24px 24px 90px 90px;
+      border: 4px solid var(--croc-skin-dark);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 14px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 아랫턱 입안 바닥 */
+    .lower-mouth-inside {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 14px;
+      background: radial-gradient(circle at 50% 35%, var(--croc-throat) 0%, var(--croc-mouth) 75%);
+      border-radius: 14px 14px 75px 75px;
+      border: 2px solid #7f1d1d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 혀 장식 */
+    .tongue {
+      position: absolute;
+      top: 25px;
+      width: 120px;
+      height: 75px;
+      background: #e11d48;
+      border-radius: 30px 30px 60px 60px;
+      opacity: 0.75;
+      box-shadow: inset 0 -6px 10px rgba(0,0,0,0.3);
+    }
+
+    /* 13개 이빨 배치 컨테이너 (U자형 아치 구조) */
+    .teeth-arch-container {
+      position: relative;
+      width: 280px;
+      height: 165px;
+      z-index: 4;
+    }
+
+    /* 개별 이빨 버튼 */
+    .tooth-btn {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 32px;
+      height: 44px;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+      border: 2px solid #cbd5e1;
+      border-radius: 8px 8px 14px 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--tooth-shadow), 0 6px 8px rgba(0,0,0,0.4);
+      transition: background 0.15s ease, opacity 0.15s ease, box-shadow 0.12s ease;
+      outline: none;
+      padding: 0;
+    }
+
+    .tooth-btn:hover:not(:disabled) {
+      background: #ffffff;
+      border-color: var(--accent);
+      filter: brightness(1.05);
+    }
+
+    /* 눌린 안전 이빨 (소리/팝업 없이 쏙 내려감) */
+    .tooth-btn.pressed {
+      box-shadow: 0 0 0 transparent;
+      background: #94a3b8;
+      border-color: #64748b;
+      cursor: default;
+      opacity: 0.45;
+    }
+
+    /* 상태 1: 게임 시작 시 입을 쩍 벌린 모습 */
+    .crocodile-head.open .upper-jaw {
+      transform: rotateX(-55deg) translateY(-50px);
+    }
+
+    /* 상태 2: 당첨 이빨 클릭 시 입이 닫히는 애니메이션 */
+    .crocodile-head.snapped .upper-jaw {
+      transform: rotateX(12deg) translateY(82px) scaleY(1.04);
+      transition: transform 0.09s cubic-bezier(0.95, 0.05, 0.795, 0.035);
+    }
+    .crocodile-head.snapped .pupil {
+      width: 22px;
+      height: 10px;
+      background: #dc2626;
+    }
+
+    /* 모달 팝업 공통 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #0f172a;
+      border: 2px solid #334155;
+      padding: 34px 26px;
+      border-radius: 22px;
+      max-width: 360px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      transform: scale(0.9);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 0 0 12px 0;
+      color: var(--accent);
+    }
+
+    .modal-desc {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 26px;
+      line-height: 1.55;
+    }
+
+    .btn-action {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      transition: all 0.15s ease;
+    }
+
+    .btn-action:hover {
+      background: var(--green-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-action.danger {
+      background: var(--red);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-action.danger:hover {
+      background: #dc2626;
+    }
+
+    /* 반응형 모바일 대응 */
+    @media (max-width: 420px) {
+      .game-stage { height: 400px; }
+      .crocodile-head { transform: scale(0.86); }
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <h1>앜~!!엌~!! 복불복게임</h1>
+    <p class="status-msg" id="status-msg">아랫턱의 13개 이빨 중 하나를 순서대로 눌러주세요!</p>
+
+    <div class="game-stage">
+      <div class="crocodile-head" id="crocodile">
+        <!-- 윗턱 -->
+        <div class="upper-jaw">
+          <div class="eyes">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+          </div>
+          <div class="upper-mouth-inside"></div>
+          <div class="nostrils">
+            <div class="nostril"></div>
+            <div class="nostril"></div>
+          </div>
+          <div class="upper-teeth">
+            <div class="upper-tooth"></div>
+            <div class="upper-tooth"></div>
+            <div class="upper-tooth"></div>
+            <div class="upper-tooth"></div>
+            <div class="upper-tooth"></div>
+            <div class="upper-tooth"></div>
+          </div>
+        </div>
+
+        <!-- 아랫턱 -->
+        <div class="lower-jaw">
+          <div class="lower-mouth-inside">
+            <div class="tongue"></div>
+            <div class="teeth-arch-container" id="teeth-container">
+              <!-- JS로 13개 이빨 동적 생성 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 시작 팝업 -->
+  <div class="modal-overlay active" id="start-modal">
+    <div class="modal-card">
+      <h2 class="modal-title">앜~!!엌~!! 복불복게임</h2>
+      <p class="modal-desc">13개의 악어 이빨 중 1개의 당첨 이빨이 숨어있습니다.<br>순서대로 이빨을 하나씩 눌러보세요!</p>
+      <button type="button" class="btn-action" id="start-btn">게임 시작하기</button>
+    </div>
+  </div>
+
+  <!-- 결과 및 재시작 팝업 -->
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal-card">
+      <h2 class="modal-title" style="color: var(--red);">으악! 물렸습니다! 🐊</h2>
+      <p class="modal-desc">당첨 이빨을 눌러 악어가 입을 닫았습니다!<br>오늘의 벌칙 당첨자 확정!</p>
+      <button type="button" class="btn-action danger" id="restart-btn">다시 하기</button>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_TEETH = 13;
+    let targetIndex = -1;
+    let isGameOver = false;
+
+    const crocodile = document.getElementById('crocodile');
+    const teethContainer = document.getElementById('teeth-container');
+    const statusMsg = document.getElementById('status-msg');
+    const startModal = document.getElementById('start-modal');
+    const resultModal = document.getElementById('result-modal');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    // 아랫턱 U자형(아래로 볼록한 구강 아치) 13개 이빨 배치
+    function renderTeeth() {
+      teethContainer.innerHTML = '';
+      
+      // 실제 아랫턱 곡선에 맞춘 각도 (15도 ~ 165도, 아래쪽 반원 아치)
+      const startAngle = 168; 
+      const endAngle = 12;    
+      const radiusX = 116;    
+      const radiusY = 62;     
+
+      for (let i = 0; i < TOTAL_TEETH; i++) {
+        const angleDeg = startAngle + (i / (TOTAL_TEETH - 1)) * (endAngle - startAngle);
+        const angleRad = angleDeg * (Math.PI / 180);
+
+        const x = Math.cos(angleRad) * radiusX;
+        const y = Math.sin(angleRad) * radiusY - 12;
+        const rotDeg = angleDeg - 90;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tooth-btn';
+        btn.setAttribute('aria-label', `${i + 1}번 이빨`);
+
+        const normalTransform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${rotDeg}deg)`;
+        const pressedTransform = `translate(-50%, -50%) translate(${x * 0.92}px, ${y + 10}px) rotate(${rotDeg}deg) scale(0.88)`;
+
+        btn.style.transform = normalTransform;
+        btn.dataset.pressedTransform = pressedTransform;
+
+        btn.addEventListener('click', () => handleToothClick(i, btn));
+        teethContainer.appendChild(btn);
+      }
+    }
+
+    // 게임 초기화 및 새 회차 시작
+    function initGame() {
+      isGameOver = false;
+      crocodile.classList.remove('snapped');
+      crocodile.classList.add('open');
+      resultModal.classList.remove('active');
+      statusMsg.textContent = '아랫턱의 13개 이빨 중 하나를 순서대로 눌러주세요!';
+
+      // 0 ~ 12 중 무작위 1개 당첨 지정
+      targetIndex = Math.floor(Math.random() * TOTAL_TEETH);
+      renderTeeth();
+    }
+
+    // 이빨 클릭 처리
+    function handleToothClick(index, btnElement) {
+      if (isGameOver || btnElement.disabled) return;
+
+      // 중복 클릭 방지 및 쏙 내려가는 시각 효과 적용
+      btnElement.disabled = true;
+      btnElement.classList.add('pressed');
+      btnElement.style.transform = btnElement.dataset.pressedTransform;
+
+      if (index === targetIndex) {
+        // 당첨 이빨 클릭 시: 입 닫힘 애니메이션 + 결과 팝업
+        isGameOver = true;
+        statusMsg.textContent = '으악! 당첨 이빨을 눌렀습니다!';
+        
+        crocodile.classList.remove('open');
+        crocodile.classList.add('snapped');
+
+        setTimeout(() => {
+          resultModal.classList.add('active');
+        }, 500);
+      }
+      // 안전 이빨 클릭 시: 기획서 기준에 따라 별도 멘트나 팝업 없이 이빨만 내려감
+    }
+
+    startBtn.addEventListener('click', () => {
+      startModal.classList.remove('active');
+      initGame();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      initGame();
+    });
+
+    // 초기 세팅
+    initGame();
+  </script>
+</body>
+</html>

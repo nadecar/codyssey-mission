@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>앜~!!엌~!! 복불복게임</title>
+<style>
+  :root {
+    --yellow: #ffd84a;
+    --yellow-deep: #f5b800;
+    --swamp: #3f8f3a;
+    --swamp-dark: #1f4d2b;
+    --mouth: #c62f3a;
+    --mouth-deep: #7d1624;
+    --ivory: #fff8e6;
+    --ink: #1c2b1f;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(28,43,31,.12) 1.5px, transparent 1.6px) 0 0 / 22px 22px,
+      var(--yellow);
+    color: var(--ink);
+    font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; min-height: 100dvh;
+    padding: 16px;
+    overflow-x: hidden;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: clamp(28px, 7.5vw, 52px);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--ivory);
+    -webkit-text-stroke: 8px var(--swamp-dark);
+    paint-order: stroke fill;
+    text-shadow: 0 5px 0 var(--swamp-dark);
+    transform: rotate(-2deg);
+    text-align: center;
+  }
+  .hint { margin: 10px 0 0; font-size: 15px; font-weight: 700; opacity: .7; }
+
+  .stage { position: relative; width: min(100%, 460px); margin-top: 6px; }
+  .stage svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .flash {
+    position: fixed; inset: 0; background: var(--mouth); opacity: 0; pointer-events: none; z-index: 50;
+  }
+  .flash.on { animation: flash .5s ease-out; }
+  @keyframes flash { 0% { opacity: .55; } 100% { opacity: 0; } }
+  .stage.shake { animation: shake .45s linear; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    15% { transform: translate(-9px, 5px) rotate(-1deg); }
+    30% { transform: translate(8px, -4px) rotate(1deg); }
+    45% { transform: translate(-6px, 3px); }
+    60% { transform: translate(5px, -2px); }
+    80% { transform: translate(-2px, 1px); }
+  }
+
+  /* 악어 SVG */
+  #upper { transition: transform .7s cubic-bezier(.3,1.5,.5,1); transform: translateY(0); }
+  #croc.open #upper { transform: translateY(-110px); }
+  #croc.snapped #upper {
+    transform: translateY(88px);
+    transition: transform .09s cubic-bezier(.9,0,1,.6);
+  }
+  .pupil { transition: transform .15s; transform-box: fill-box; transform-origin: center; }
+  #croc.snapped .pupil { transform: scaleY(.18) scaleX(1.5); }
+
+  .tooth-hit { cursor: pointer; outline: none; }
+  .tooth-in { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .16s ease-out, opacity .16s; }
+  .tooth-in path { fill: var(--ivory); stroke: #d9c9a3; stroke-width: 2; stroke-linejoin: round; }
+  .tooth-hit:hover .tooth-in { transform: scaleY(1.1); }
+  .tooth-hit:focus-visible .tooth-in path { stroke: var(--yellow-deep); stroke-width: 4; }
+  .tooth-hit.pressed { pointer-events: none; }
+  .tooth-hit.pressed .tooth-in { transform: scaleY(.16); opacity: .5; }
+
+  /* 팝업 */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+    background: rgba(28,43,31,.72); opacity: 0; pointer-events: none; transition: opacity .2s;
+    padding: 16px;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: min(100%, 360px); text-align: center; background: var(--ivory);
+    border: 5px solid var(--ink); border-radius: 26px; padding: 28px 22px 24px;
+    box-shadow: 0 8px 0 var(--ink);
+    transform: scale(.88) rotate(-1.5deg); transition: transform .25s cubic-bezier(.3,1.6,.5,1);
+  }
+  .overlay.active .modal { transform: scale(1) rotate(0); }
+  .modal h2 { margin: 0 0 10px; font-size: 28px; font-weight: 900; letter-spacing: -0.02em; }
+  .modal p { margin: 0 0 22px; font-size: 16px; line-height: 1.5; font-weight: 600; }
+  .modal.bite h2 { color: var(--mouth); font-size: 34px; }
+  .btn {
+    font: inherit; font-size: 19px; font-weight: 900; color: var(--ivory);
+    background: var(--swamp); border: 4px solid var(--ink); border-radius: 16px;
+    padding: 12px 34px; cursor: pointer; box-shadow: 0 5px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .btn.red { background: var(--mouth); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+  .btn:focus-visible { outline: 4px solid var(--yellow-deep); outline-offset: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #upper, .tooth-in, .modal { transition-duration: .01s !important; }
+    .stage.shake, .flash.on { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>앜~!!엌~!! 복불복게임</h1>
+
+<div class="stage" id="stage">
+  <svg id="croc" viewBox="0 -50 400 470" role="group" aria-label="악어 입과 13개의 이빨">
+    <!-- 뒤쪽: 목구멍 -->
+    <path d="M45 240 L58 130 Q200 96 342 130 L355 240 Z" fill="var(--mouth-deep)"/>
+    <!-- 아랫턱 -->
+    <path d="M14 232 C14 410 386 410 386 232 Z" fill="var(--swamp)" stroke="var(--swamp-dark)" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M60 345 Q200 420 340 345" fill="none" stroke="var(--swamp-dark)" stroke-width="3" opacity=".35" stroke-linecap="round"/>
+    <!-- 입안 바닥 -->
+    <path d="M36 228 C36 395 364 395 364 228 Z" fill="var(--mouth)"/>
+    <ellipse cx="200" cy="338" rx="92" ry="22" fill="#e2616b" opacity=".8"/>
+    <!-- 잇몸 (U자 아치) -->
+    <path d="M62 296 Q200 396 338 296" fill="none" stroke="#f08a93" stroke-width="12" stroke-linecap="round"/>
+    <!-- 13개 이빨 -->
+    <g id="teeth"></g>
+    <!-- 윗턱 -->
+    <g id="upper">
+      <path d="M14 240 C14 30 386 30 386 240 Z" fill="var(--swamp)" stroke="var(--swamp-dark)" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M40 150 C80 80 320 80 360 150" fill="none" stroke="var(--swamp-dark)" stroke-width="3" opacity=".25" stroke-linecap="round"/>
+      <g fill="var(--swamp-dark)" opacity=".22">
+        <ellipse cx="150" cy="170" rx="9" ry="6"/><ellipse cx="250" cy="170" rx="9" ry="6"/>
+        <ellipse cx="200" cy="195" rx="9" ry="6"/><ellipse cx="120" cy="205" rx="8" ry="5"/><ellipse cx="280" cy="205" rx="8" ry="5"/>
+      </g>
+      <ellipse cx="180" cy="118" rx="6" ry="4" fill="var(--swamp-dark)"/>
+      <ellipse cx="220" cy="118" rx="6" ry="4" fill="var(--swamp-dark)"/>
+      <!-- 윗이빨 -->
+      <g fill="var(--ivory)" stroke="#d9c9a3" stroke-width="2" stroke-linejoin="round" id="upper-teeth"></g>
+      <rect x="14" y="234" width="372" height="8" rx="4" fill="var(--swamp-dark)"/>
+      <!-- 눈 -->
+      <g>
+        <circle cx="104" cy="96" r="30" fill="var(--swamp)" stroke="var(--swamp-dark)" stroke-width="6"/>
+        <circle cx="104" cy="96" r="21" fill="#fff6c8" stroke="var(--ink)" stroke-width="3"/>
+        <ellipse class="pupil" cx="104" cy="96" rx="5.5" ry="15" fill="var(--ink)"/>
+        <circle cx="296" cy="96" r="30" fill="var(--swamp)" stroke="var(--swamp-dark)" stroke-width="6"/>
+        <circle cx="296" cy="96" r="21" fill="#fff6c8" stroke="var(--ink)" stroke-width="3"/>
+        <ellipse class="pupil" cx="296" cy="96" rx="5.5" ry="15" fill="var(--ink)"/>
+      </g>
+    </g>
+  </svg>
+</div>
+<p class="hint">이빨을 하나씩 눌러보세요</p>
+
+<div class="flash" id="flash"></div>
+
+<div class="overlay active" id="start-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="start-title">
+    <h2 id="start-title">앜~!!엌~!! 복불복게임</h2>
+    <p>13개의 이빨 중 딱 하나가 함정!<br>돌아가며 한 개씩 눌러보세요.</p>
+    <button type="button" class="btn" id="start-btn">시작하기</button>
+  </div>
+</div>
+
+<div class="overlay" id="result-modal">
+  <div class="modal bite" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <h2 id="result-title">앜! 물렸다! 🐊</h2>
+    <p>방금 누른 사람이 당첨!</p>
+    <button type="button" class="btn red" id="restart-btn">다시 하기</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var TOTAL = 13;
+  var NS = 'http://www.w3.org/2000/svg';
+  var target = -1, over = false;
+
+  var croc = document.getElementById('croc');
+  var stage = document.getElementById('stage');
+  var teethG = document.getElementById('teeth');
+  var upperTeeth = document.getElementById('upper-teeth');
+  var startModal = document.getElementById('start-modal');
+  var resultModal = document.getElementById('result-modal');
+  var flash = document.getElementById('flash');
+
+  // 윗턱 이빨 (장식)
+  for (var u = 0; u < 9; u++) {
+    var ux = 66 + u * 33.5;
+    var up = document.createElementNS(NS, 'path');
+    up.setAttribute('d', 'M' + (ux - 10) + ' 240 L' + ux + ' 268 L' + (ux + 10) + ' 240 Z');
+    upperTeeth.appendChild(up);
+  }
+
+  // 아랫턱 U자 아치: 가운데가 가장 낮고 양끝이 올라간 곡선
+  function buildTeeth() {
+    teethG.innerHTML = '';
+    for (var i = 0; i < TOTAL; i++) {
+      var t = (i - 6) / 6;                       // -1 ~ 1
+      var x = 200 + 132 * t;
+      var y = 346 - 50 * t * t;
+      var rot = Math.atan((-100 * t) / 132) * 180 / Math.PI; // 곡선 바깥쪽으로 기울지 않고 안쪽을 향함
+
+      var g = document.createElementNS(NS, 'g');
+      g.setAttribute('class', 'tooth-hit');
+      g.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ')');
+      g.setAttribute('role', 'button');
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('aria-label', (i + 1) + '번 이빨');
+
+      var hit = document.createElementNS(NS, 'rect');
+      hit.setAttribute('x', -13); hit.setAttribute('y', -60);
+      hit.setAttribute('width', 26); hit.setAttribute('height', 68);
+      hit.setAttribute('fill', 'transparent');
+
+      var inner = document.createElementNS(NS, 'g');
+      inner.setAttribute('class', 'tooth-in');
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', 'M-11 4 L-4 -46 Q0 -54 4 -46 L11 4 Z');
+      inner.appendChild(p);
+
+      g.appendChild(hit);
+      g.appendChild(inner);
+      (function (idx, el) {
+        el.addEventListener('click', function () { press(idx, el); });
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); press(idx, el); }
+        });
+      })(i, g);
+      teethG.appendChild(g);
+    }
+  }
+
+  function press(i, el) {
+    if (over || el.classList.contains('pressed')) return;
+    el.classList.add('pressed');
+    el.setAttribute('aria-disabled', 'true');
+    if (i !== target) return;           // 안전한 이빨: 아무 효과 없이 쏙 들어가기만 함
+
+    over = true;                        // 당첨: 입이 콱 닫힘
+    croc.classList.remove('open');
+    croc.classList.add('snapped');
+    setTimeout(function () {
+      stage.classList.add('shake');
+      flash.classList.add('on');
+    }, 90);
+    setTimeout(function () { resultModal.classList.add('active'); document.getElementById('restart-btn').focus(); }, 800);
+  }
+
+  function newGame() {
+    over = false;
+    target = Math.floor(Math.random() * TOTAL);
+    stage.classList.remove('shake');
+    flash.classList.remove('on');
+    resultModal.classList.remove('active');
+    croc.classList.remove('snapped');
+    buildTeeth();
+    // 닫힌 상태에서 한 프레임 쉬고 입 벌리기
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { croc.classList.add('open'); });
+    });
+  }
+
+  document.getElementById('start-btn').addEventListener('click', function () {
+    startModal.classList.remove('active');
+    newGame();
+  });
+  document.getElementById('restart-btn').addEventListener('click', newGame);
+
+  buildTeeth();
+  document.getElementById('start-btn').focus();
+})();
+</script>
+</body>
+</html>
